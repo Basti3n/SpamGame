@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Class-Path: javafx-controls-12.0.1-win.jar javafx-controls-12.0.1.jar 
+ javafx-base-12.0.1-win.jar javafx-graphics-12.0.1-win.jar javafx-base
+ -12.0.1.jar javafx-graphics-12.0.1.jar javafx-fxml-12.0.1.jar javafx-
+ fxml-12.0.1-win.jar
+Main-Class: org.openjfx.App
+
