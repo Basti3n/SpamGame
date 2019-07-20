@@ -3,7 +3,11 @@ package org.openjfx;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -33,7 +37,12 @@ public class GameController {
     @FXML
     public Label word;
 
+    @FXML
+    public Label timeRemaining;
+
     public int random;
+
+    public Thread t;
 
 
     @FXML
@@ -42,7 +51,7 @@ public class GameController {
         setListener();
         setRandom();
         setCurrentWord();
-
+        setTimeRemaining();
     }
 
     @FXML
@@ -52,7 +61,6 @@ public class GameController {
 
     public void keyBoardEvent(){
         App.getScene().setOnKeyReleased(keyEvent -> {
-            System.out.println(keyEvent.getCode());
             if(keyEvent.getCode() == KeyCode.SPACE)
                 currentSpam.setText(Integer.toString(Integer.parseInt(currentSpam.getText())+1));
         });
@@ -84,20 +92,13 @@ public class GameController {
 
     @FXML
     public void compareWord() throws IOException {
-        input.setDisable(true);
-        keyBoardEvent();
         if(input.getText().toLowerCase().equals(Data.currentWord.toLowerCase() )){
-            Data.playerWin();
-            scorePlayer.setProgress(Data.scorePlayer/Data.maxScore);
+            doesUserWon(true);
         }else{
-            Data.playerLose();
-            scoreIA.setProgress(Data.scoreIa/Data.maxScore);
+            doesUserWon(false);
         }
-        input.setText("");
-        word.setText("");
         win();
-        setRandom();
-        setCurrentWord();
+        reset();
     }
 
     public void win() throws IOException {
@@ -115,13 +116,75 @@ public class GameController {
     public void setCurrentWord(){
         try {
             Data.currentWord = new String(Data.dictionnary.get(new Random().nextInt(Data.dictionnary.size())).getBytes(),"UTF-8");
+            Data.timer = (long)(Data.currentWord.length()*0.4)+(long)random/2 + Data.currentHandicap;
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+        setTimerThread();
     }
 
     public void setRandom(){
         random = Data.spamMin + (int)(Math.random() * (Data.spamMax -  Data.spamMin));
+    }
+
+    public void setTimerThread(){
+        String threatname = String.format("%.3f",  System.currentTimeMillis() / 1000.0);
+        t = new Thread(() -> {
+            try {
+                Thread.sleep(Data.timer*1000);
+                System.out.println("You lose after "+Data.timer);
+                Platform.runLater(this::reset);
+                System.out.println("Thread stop");
+                t.interrupt();
+            } catch (InterruptedException e) {
+                //e.printStackTrace();
+            }
+        });
+        t.setName(threatname);
+        System.out.println("Thread start");
+        t.start();
+
+    }
+
+    public void reset(){
+        input.setDisable(true);
+        doesUserWon(false);
+        keyBoardEvent();
+        input.setText("");
+        word.setText("");
+        setRandom();
+        setCurrentWord();
+        setTimeRemaining();
+
+    }
+
+    public void doesUserWon(Boolean b){
+        if(b){
+            Data.playerWin();
+            scorePlayer.setProgress(Data.scorePlayer/Data.maxScore);
+        }else{
+            Data.playerLose();
+            scoreIA.setProgress(Data.scoreIa/Data.maxScore);
+        }
+    }
+
+    public void setTimeRemaining(){
+        timeRemaining.setText(Long.toString(Data.timer));
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            int counter = 0;
+            @Override
+            public void run() {
+                //call the method
+                counter++;
+                if (counter >= Data.timer+1){
+                    timer.cancel();
+                }
+                if(!timeRemaining.getText().equals("0"))
+                    Platform.runLater( ()-> timeRemaining.setText(Integer.toString(Integer.parseInt(timeRemaining.getText())-1)));
+            }
+        }, 0, 1000);
+
     }
 
 

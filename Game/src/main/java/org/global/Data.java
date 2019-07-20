@@ -10,6 +10,8 @@ import java.util.ArrayList;
 public class Data {
     public static int scorePlayer = 0;
     public static int scoreIa = 0;
+    public static long timer;
+    public static long currentHandicap = 0;
     public static double maxScore = 10;
     public static ArrayList<String> dictionnary = new ArrayList<>();
     public static int spamMin = 10;
@@ -24,10 +26,12 @@ public class Data {
 
     public static void playerWin(){
         scorePlayer++;
+        currentHandicap-=0.1;
     }
 
     public static void playerLose(){
         scoreIa++;
+        currentHandicap+=0.1;
     }
 
     public static boolean hasPlayerWon(){
