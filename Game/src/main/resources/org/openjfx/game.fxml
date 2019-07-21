@@ -26,7 +26,7 @@
         <Label text="Spammer la touche ESPACE" />
         <Label text="0" fx:id="currentSpam"></Label>
         <Label text="" fx:id="word"></Label>
-        <TextField disable="true" fx:id="input" onKeyReleased="#removeSpace" onAction="#compareWord"></TextField>
+        <TextField disable="true" fx:id="input" onKeyReleased="#removeSpace" onAction="#compareWord" style="-fx-border-color: blue"></TextField>
         <Label fx:id="timeRemaining"></Label>
 
     </VBox>

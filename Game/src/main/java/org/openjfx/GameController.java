@@ -2,22 +2,19 @@ package org.openjfx;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+
 import java.util.Random;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javafx.animation.RotateTransition;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
+import javafx.util.Duration;
 import org.global.Data;
 
 public class GameController {
@@ -44,6 +41,9 @@ public class GameController {
 
     public Thread t;
 
+    public int leaveThread = 0;
+
+    public Timer timer = new Timer();
 
     @FXML
     public void initialize(){
@@ -96,6 +96,15 @@ public class GameController {
             doesUserWon(true);
         }else{
             doesUserWon(false);
+            input.setStyle("-fx-border-color: red");
+            RotateTransition rt = new RotateTransition(Duration.millis(100),input);
+            rt.setByAngle(5);
+            rt.setFromAngle(0);
+            rt.setCycleCount(4);
+            rt.setAutoReverse(true);
+            rt.play();
+            rt.setOnFinished( (envent )-> input.setStyle("-fx-border-color: blue"));
+
         }
         win();
         reset();
@@ -128,19 +137,23 @@ public class GameController {
     }
 
     public void setTimerThread(){
-        String threatname = String.format("%.3f",  System.currentTimeMillis() / 1000.0);
         t = new Thread(() -> {
             try {
                 Thread.sleep(Data.timer*1000);
-                System.out.println("You lose after "+Data.timer);
-                Platform.runLater(this::reset);
-                System.out.println("Thread stop");
-                t.interrupt();
+                if(leaveThread != 1){
+                    System.out.println("You lose after "+Data.timer);
+                    Platform.runLater(this::reset);
+                    Platform.runLater( () ->   doesUserWon(false));
+                    System.out.println("Thread stop");
+                    t.interrupt();
+                    leaveThread = 0;
+                }
             } catch (InterruptedException e) {
+                System.out.println("Thread stop");
+                leaveThread=1;
                 //e.printStackTrace();
             }
         });
-        t.setName(threatname);
         System.out.println("Thread start");
         t.start();
 
@@ -148,7 +161,6 @@ public class GameController {
 
     public void reset(){
         input.setDisable(true);
-        doesUserWon(false);
         keyBoardEvent();
         input.setText("");
         word.setText("");
@@ -170,7 +182,7 @@ public class GameController {
 
     public void setTimeRemaining(){
         timeRemaining.setText(Long.toString(Data.timer));
-        Timer timer = new Timer();
+        timer = new Timer();
         timer.schedule(new TimerTask() {
             int counter = 0;
             @Override
@@ -180,10 +192,13 @@ public class GameController {
                 if (counter >= Data.timer+1){
                     timer.cancel();
                 }
-                if(!timeRemaining.getText().equals("0"))
-                    Platform.runLater( ()-> timeRemaining.setText(Integer.toString(Integer.parseInt(timeRemaining.getText())-1)));
+                if(!timeRemaining.getText().equals("0")) {
+                    Platform.runLater(() -> timeRemaining.setText(Integer.toString(Integer.parseInt(timeRemaining.getText()) - 1)));
+
+                }
             }
         }, 0, 1000);
+
 
     }
 
