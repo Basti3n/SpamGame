@@ -24,7 +24,9 @@ public class App extends Application {
     public void start(Stage stage) throws IOException {
         scene = new Scene(loadFXML("lobby"));
         stage.setScene(scene);
+        stage.setHeight(400);
         stage.show();
+        scene.getStylesheets().add(App.class.getResource("stylesheet.css").toString());
         setDictionary();
     }
 

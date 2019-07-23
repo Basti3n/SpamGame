@@ -1,4 +1,3 @@
-module-info.class
 org\openjfx\GameController.class
 org\openjfx\LobbyController.class
 org\global\Data.class

@@ -6,9 +6,16 @@ import java.io.UnsupportedEncodingException;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import javafx.animation.KeyFrame;
 import javafx.animation.RotateTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -19,8 +26,10 @@ import org.global.Data;
 
 public class GameController {
 
-    @FXML
-    public Label currentSpam;
+//    @FXML
+//    public Label currentSpam;
+
+    public int currentSpam = 0;
 
     @FXML
     public TextField input;
@@ -43,7 +52,12 @@ public class GameController {
 
     public int leaveThread = 0;
 
-    public Timer timer = new Timer();
+    public int x = 0;
+    public int y = 0;
+
+    public static ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
+    static ScheduledFuture<?> timerFutur;
+
 
     @FXML
     public void initialize(){
@@ -52,6 +66,10 @@ public class GameController {
         setRandom();
         setCurrentWord();
         setTimeRemaining();
+        App.getScene().getWindow().setOnCloseRequest(event -> {
+            System.out.println("oook");
+            exitApplication();
+        });
     }
 
     @FXML
@@ -61,21 +79,34 @@ public class GameController {
 
     public void keyBoardEvent(){
         App.getScene().setOnKeyReleased(keyEvent -> {
-            if(keyEvent.getCode() == KeyCode.SPACE)
-                currentSpam.setText(Integer.toString(Integer.parseInt(currentSpam.getText())+1));
+            if(keyEvent.getCode() == KeyCode.SPACE){
+                currentSpam++;
+                shakeStage();
+                word.setText(Integer.toString(currentSpam));
+                if(currentSpam == random){
+                    currentSpam = 0;
+                    noKeyBoardEvent();
+                    word.setText(Data.currentWord);
+                    input.setDisable(false);
+                }
+            }
+
+
+//              currentSpam.setText(Integer.toString(Integer.parseInt(currentSpam.getText())+1));
+
         });
     }
 
     public void setListener(){
-        currentSpam.textProperty().addListener((ov, t, t1) -> {
-            if(currentSpam.getText().equals(Integer.toString(random))){
-                currentSpam.setText("0");
-                noKeyBoardEvent();
-                word.setText(Data.currentWord);
-                input.setDisable(false);
-            }
-
-        });
+//        currentSpam.textProperty().addListener((ov, t, t1) -> {
+//            if(currentSpam.getText().equals(Integer.toString(random))){
+//                currentSpam.setText("0");
+//                noKeyBoardEvent();
+//                word.setText(Data.currentWord);
+//                input.setDisable(false);
+//            }
+//
+//        });
     }
 
     public void noKeyBoardEvent(){
@@ -96,14 +127,7 @@ public class GameController {
             doesUserWon(true);
         }else{
             doesUserWon(false);
-            input.setStyle("-fx-border-color: red");
-            RotateTransition rt = new RotateTransition(Duration.millis(100),input);
-            rt.setByAngle(5);
-            rt.setFromAngle(0);
-            rt.setCycleCount(4);
-            rt.setAutoReverse(true);
-            rt.play();
-            rt.setOnFinished( (envent )-> input.setStyle("-fx-border-color: blue"));
+            wrongInput();
 
         }
         win();
@@ -125,7 +149,7 @@ public class GameController {
     public void setCurrentWord(){
         try {
             Data.currentWord = new String(Data.dictionnary.get(new Random().nextInt(Data.dictionnary.size())).getBytes(),"UTF-8");
-            Data.timer = (long)(Data.currentWord.length()*0.4)+(long)random/2 + Data.currentHandicap;
+            Data.timer = (long)(Data.currentWord.length()*0.4)+(long)random/4 + Data.currentHandicap;
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
@@ -139,27 +163,25 @@ public class GameController {
     public void setTimerThread(){
         t = new Thread(() -> {
             try {
-                Thread.sleep(Data.timer*1000);
+                Thread.sleep((long)Data.timer*1000);
                 if(leaveThread != 1){
                     System.out.println("You lose after "+Data.timer);
                     Platform.runLater(this::reset);
                     Platform.runLater( () ->   doesUserWon(false));
-                    System.out.println("Thread stop");
                     t.interrupt();
                     leaveThread = 0;
                 }
             } catch (InterruptedException e) {
-                System.out.println("Thread stop");
                 leaveThread=1;
-                //e.printStackTrace();
             }
         });
-        System.out.println("Thread start");
         t.start();
 
     }
 
     public void reset(){
+        timerFutur.cancel(false);
+        t.interrupt();
         input.setDisable(true);
         keyBoardEvent();
         input.setText("");
@@ -167,6 +189,7 @@ public class GameController {
         setRandom();
         setCurrentWord();
         setTimeRemaining();
+
 
     }
 
@@ -181,26 +204,63 @@ public class GameController {
     }
 
     public void setTimeRemaining(){
-        timeRemaining.setText(Long.toString(Data.timer));
-        timer = new Timer();
-        timer.schedule(new TimerTask() {
-            int counter = 0;
-            @Override
-            public void run() {
-                //call the method
-                counter++;
-                if (counter >= Data.timer+1){
-                    timer.cancel();
-                }
-                if(!timeRemaining.getText().equals("0")) {
-                    Platform.runLater(() -> timeRemaining.setText(Integer.toString(Integer.parseInt(timeRemaining.getText()) - 1)));
-
-                }
+        timeRemaining.setText(String.format("%.2f",Data.timer));
+        Runnable createValue = (() -> {
+            if(Double.parseDouble(timeRemaining.getText().replace(",",".")) < 3.20){
+                timeRemaining.setVisible(false);
             }
-        }, 0, 1000);
-
-
+            if( !timeRemaining.getText().equals("0,20") ) {
+                Platform.runLater(() -> timeRemaining.setText(String.format("%.2f",Double.parseDouble(timeRemaining.getText().replace(",",".")) - 0.20)));
+            }
+            else{
+                System.out.println("You lose after "+Data.timer);
+                Platform.runLater(this::reset);
+                Platform.runLater( () ->   doesUserWon(false));
+                timeRemaining.setVisible(true);
+            }
+        } );
+        timerFutur = timer.scheduleAtFixedRate(createValue,0,200, TimeUnit.MILLISECONDS);
     }
 
+    public void exitApplication() {
+        timerFutur.cancel(false);
+        timer.shutdownNow();
+        t.interrupt();
+        Platform.exit();
+    }
+
+    public void wrongInput(){
+        input.setStyle("-fx-border-color: red");
+        RotateTransition rt = new RotateTransition(Duration.millis(100),input);
+        rt.setByAngle(5);
+        rt.setFromAngle(0);
+        rt.setCycleCount(4);
+        rt.setAutoReverse(true);
+        rt.play();
+        rt.setOnFinished( (envent )-> input.setStyle("-fx-border-color: blue"));
+    }
+
+    public void shakeStage() {
+        Timeline timelineX = new Timeline(new KeyFrame(Duration.seconds(0.1), event -> {
+            if (x == 0) {
+                App.getScene().getWindow().setX(App.getScene().getWindow().getX() + 10);
+                x = 1;
+            } else {
+                App.getScene().getWindow().setX(App.getScene().getWindow().getX() - 10);
+                x = 0;
+            }
+            if (y == 0) {
+                App.getScene().getWindow().setY(App.getScene().getWindow().getY() + 10);
+                y = 1;
+            } else {
+                App.getScene().getWindow().setY(App.getScene().getWindow().getY() - 10);
+                y = 0;
+            }
+        }));
+
+        timelineX.setCycleCount(20);
+        timelineX.setAutoReverse(true);
+        timelineX.play();
+    }
 
 }
